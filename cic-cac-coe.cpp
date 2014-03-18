@@ -7,6 +7,7 @@
 #include <iostream>
 #include <cstdlib>
 #include <vector>
+#include <algorithm>
 
 using namespace std;
 
@@ -22,6 +23,9 @@ char block;
 int selection;
 //AI vs Human
 int opponent;
+
+int checkGame(vector<char> board);
+void run();
 //show the board
 void show_board() {
     cout << "+++++++++++++++++++++++++++++" << endl;
@@ -80,6 +84,11 @@ bool check_draw(vector<char> board){
 
 //validates the user input
 bool validate_selection(int selection){
+	//first we check if it is out of range
+	if (selection > 8 || selection < 0)
+	{
+		return false;
+	}
 	if(board[selection] == 'X' || board[selection] == 'O'){
 		return false;
 	}
@@ -96,24 +105,27 @@ void switch_turns(){
 	else{
 		turn = 1;
 	}
+	run();
 }
 
 void check_status(vector<char> board){
+	int gameStatus = checkGame(board);
 	//before we switch turns, we check if the user won or not
-	if(check_winner(board)){
-		show_board();
-		show_winner();
-		status = 0;
+	if(gameStatus == 0){
+		switch_turns();
+		
 	}
 	//what if the game is a Draw ?
-	else if(check_draw(board)){
+	else if(gameStatus == 1){
 		show_board();
 		show_draw();
 		status = 0;
-
 	}
 	else{
-		switch_turns();
+		//winnnnnn
+		show_board();
+		show_winner();
+		status = 0;
 	}
 }
 
@@ -121,7 +133,7 @@ vector<int> getAllPossibleMoves(vector<char> board){
 	vector<int> spaces;
 	for (int i = 0; i < 9; ++i)
 	{
-		if (board[i] != 'X' || board[i] != 'O')
+		if (board[i] == 'E')
 		{
 			//this is the chosen one
 			spaces.push_back(i);
@@ -132,6 +144,7 @@ vector<int> getAllPossibleMoves(vector<char> board){
 
 //we use this function to check the game status, is it won, or draw
 //int unfinished = 0, won = 1, draw = 2;
+
 int checkGame(vector<char> board){
 	if(check_winner(board)){
 		return 1;
@@ -149,7 +162,6 @@ int getScore(vector<char> board, char turn){
 		iterations = 0,
 		MAXWIN = 100,
 		penalty = -5;
-		cout << "getScore()" << endl;
 	//here, we read all the possible moves, and choose the best based on the score
 	//score, MAXWIN = 100, DRAW = 0, MAXLOSE = -5
 	//The MAXWIN score is acheived by doing the least of iterations
@@ -158,16 +170,14 @@ int getScore(vector<char> board, char turn){
 	//first we get all the possible moves
 	vector<int> moves = getAllPossibleMoves(board);
 	//now we loop through every possibility
-	for (int i = 0; i < moves.size(); ++i)
+	for(std::vector<int>::size_type i = 0; i != moves.size(); i++) 
 	{
-		cout << "getScore(), the loop" << endl;
 		//okay so for this we clone the board, add our move
 		vector<char> newBoard(board);
 		//then we add a move 
 		newBoard[moves[i]] = turn;
 		//now we check if the game is won or a draw
 		if (checkGame(newBoard) == 1){
-			cout << "getScore(), the loop, first IF" << endl;
 			//this move, wins the game, but who won?
 			//if the AI wins : calculate the score, if it is better, save it as best score
 			//if the opponent wins : we calculate the lose score, compare it if it is better, then save it..
@@ -175,10 +185,10 @@ int getScore(vector<char> board, char turn){
 			if (turn == 'O')
 			{
 				//its me mittens!
-				score = MAXWIN += penalty*(iterations);
+				score =  MAXWIN + penalty*iterations;
 			}else{
 				//its the human being...
-				score = -(MAXWIN += penalty*(iterations));
+				score = -MAXWIN - penalty*iterations;
 				
 			}
 			bestScore = (bestScore < score) ? score : bestScore;
@@ -192,7 +202,6 @@ int getScore(vector<char> board, char turn){
 			//now we create a new board, and get its best score..
 			vector<char> clonedBoard(newBoard);
 			char newTurn = (turn == 'X') ? 'O' : 'X';
-			cout << "getScore(), the loop, iteration ELSE, iterations =="<< iterations << " , bestScore" << endl;
 			int score = getScore(clonedBoard,newTurn);
 			bestScore = (bestScore < score) ? score : bestScore;
 		}
@@ -201,6 +210,7 @@ int getScore(vector<char> board, char turn){
 	return bestScore;
 }
 int nextMove(){
+	//first we see, if the game has just begun
 	//first we generate a list of all possible moves
 	//then we loop over it
 	//then we get the score of each move
@@ -209,10 +219,15 @@ int nextMove(){
 		bestMove;
 
 	vector<int> moves = getAllPossibleMoves(board);
-
-	for (int i = 0; i < moves.size(); ++i)
+	int size = moves.size();
+	if (size == 8)
 	{
-		vector<char> newBoard(board);
+		int random = rand() % size;
+		return moves[random];
+
+	}
+	for(std::vector<int>::size_type i = 0; i != size; i++) {
+	    vector<char> newBoard(board);
 		newBoard[moves[i]] = 'O';
 		int score = getScore(newBoard,'X');
 		if (bestScore < score)
@@ -221,47 +236,53 @@ int nextMove(){
 			bestMove = moves[i];
 		}
 	}
-
+	cout << bestMove << endl;
 	return bestMove;
-
 }
+
 void AI(){
 	cout << "Calculating..." << endl;
 	int next = nextMove();
 	//now we use it on screen
-	if(validate_selection(selection)){
-		board[selection] = 'O';
+	if(validate_selection(next)){
+		board[next] = 'O';
 		check_status(board);
+	}
+	else{
+		AI();
+	}
+}
+
+void player(){
+	cout << "Player " << turn << " Please enter a valid number (0-8) :" <<endl;
+	cin >> selection;
+	if(validate_selection(selection)){
+		board[selection] = block;
+		check_status(board);
+	}else{
+		//his choice is invalid
+		cout << "invalid move" << endl;
+		player();
 	}
 }
 
 //function to show the board
 void run(){
 	show_board();
-	if(turn == 1){
-		block = 'X';
-	}
-	else{
-		block = 'O';
-	}
+	block = (turn == 1) ? 'X' : 'O';
 	//Artificial Inteligence :)
 	if(opponent == 2 && turn == 2){
 		AI();
 	}
 	else{
-		cout << "Player " << turn << " Please enter a valid number (0-8) :" <<endl;
-		cin >> selection;
-		if(validate_selection(selection)){
-			board[selection] = block;
-			check_status(board);
-		}
+		player();
 	}
 
 }
 
 int main(){
 	//we first populate the board with dummy strings
-	char dummy[9] = {'0','1','2','3','4','5','6','7','8'};
+	char dummy[9] = {'E','E','E','E','E','E','E','E','E'};
 
 	for(int index=0;index<9; ++index)
 	{
@@ -275,9 +296,6 @@ int main(){
 		cin >> opponent;
 		status = 1;
 	}
-	while(status == 1){
-		run();
-	}
-
+	run();
 }
 
