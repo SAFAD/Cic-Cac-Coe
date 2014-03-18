@@ -69,7 +69,7 @@ bool check_winner(vector<char> board){
 }
 
 bool check_draw(vector<char> board){
-    if (std::find(board.begin(), board.end(), '0') != board.end())
+    if (std::count(board.begin(), board.end(), 'E') < 0)
     {
         //there still are no more moves
         //now lets see if someone one
@@ -116,12 +116,12 @@ void check_status(vector<char> board){
 		
 	}
 	//what if the game is a Draw ?
-	else if(gameStatus == 1){
+	else if(gameStatus == 2){
 		show_board();
 		show_draw();
 		status = 0;
 	}
-	else{
+	else if(gameStatus == 1){
 		//winnnnnn
 		show_board();
 		show_winner();
@@ -215,8 +215,8 @@ int nextMove(){
 	//then we loop over it
 	//then we get the score of each move
 	//and we compare it to the bestScore, if it is better take it and keep it as best move
-	int bestScore,
-		bestMove;
+	int bestScore = 0,
+		bestMove = 0;
 
 	vector<int> moves = getAllPossibleMoves(board);
 	int size = moves.size();
@@ -236,7 +236,6 @@ int nextMove(){
 			bestMove = moves[i];
 		}
 	}
-	cout << bestMove << endl;
 	return bestMove;
 }
 
