@@ -12,11 +12,11 @@
 using namespace std;
 
 //This is our board, 0 => empty, 1 => X, 2 => O
-vector<char> originalBoard;
+vector<int> originalBoard;
 //the game is running or not ? 1 yes , 0 no
 int status = 0;
 //turns 1 = player1, 2 = player2 OR CPU
-char turn = 'X';
+char turn = 1;
 //to define the character we put in the column
 char block;
 //the user input
@@ -24,12 +24,28 @@ int selection;
 //AI vs Human
 int opponent;
 
-int checkGame(vector<char> board);
+int checkGame(vector<int> board);
 void run();
 //show the board
-void ShowBoard() {
+char ReplaceBlocks(int blockId){
+	switch(blockId) {
+        case 1:
+            return 'X'; //it is the first player..
+        case 0:
+            return ' '; //an empty block
+        case 2:
+            return 'O'; //second player here..
+    }
+    return ' ';
+
+}
+void DrawBoard() {
     for(int i=0; i<7; i+=3) {
-        cout <<  originalBoard[i] <<" | "<< originalBoard[i+1] << "| " << originalBoard[i+2]  << endl;
+        cout << " " <<  ReplaceBlocks(originalBoard[i]) <<" | "<< ReplaceBlocks(originalBoard[i+1]) << " | " << ReplaceBlocks(originalBoard[i+2])  << endl;
+        if (i != 6)
+        {
+        	cout << "---+---+---" <<endl;
+        }
     }
 }
 
@@ -43,22 +59,22 @@ void show_winner(){
 }
 
 //check who won !
-bool check_winner(vector<char> board){
+bool check_winner(vector<int> board){
 
     for(int i=0; i<7; i+=3) {
-        if((board[i] == 'X' && board[i+1] == 'X' && board[i+2] == 'X') || (board[i] == 'O' && board[i+1] == 'O' && board[i+2] == 'O')){
+        if((board[i] == 2 && board[i+1] == 2 && board[i+2] == 2) || (board[i] == 1 && board[i+1] == 1 && board[i+2] == 1)){
             return true;
         }
     }
 
     for(int i=0; i<3; i++) {
-        if((board[i] == 'X' && board[i+3] == 'X' && board[i+6] == 'X') || (board[i] == 'O' && board[i+3] == 'O' && board[i+6] == 'O')){
+        if((board[i] == 2 && board[i+3] == 2 && board[i+6] == 2) || (board[i] == 1 && board[i+3] == 1 && board[i+6] == 1)){
             return true;
         }
     }
 
     for(int i=0; i<3; i+=2) {
-        if((board[i] == 'X' && board[4] == 'X' && board[8-i] == 'X') || (board[i] == 'O' && board[4] == 'O' && board[8-i] == 'O')){
+        if((board[i] == 2 && board[4] == 2 && board[8-i] == 2) || (board[i] == 1 && board[4] == 1 && board[8-i] == 1)){
             return true;
         }
     }
@@ -66,8 +82,8 @@ bool check_winner(vector<char> board){
     return false;
 }
 
-bool check_draw(vector<char> board){
-    if (std::count(board.begin(), board.end(), 'E') < 0)
+bool check_draw(vector<int> board){
+    if (std::count(board.begin(), board.end(), '0') < 0)
     {
         //there still are no more moves
         //now lets see if someone one
@@ -87,7 +103,7 @@ bool validate_selection(int selection){
 	{
 		return false;
 	}
-	if(originalBoard[selection] == 'X' || originalBoard[selection] == 'O'){
+	if(originalBoard[selection] == 1 || originalBoard[selection] == 2){
 		return false;
 	}
 	else {
@@ -97,11 +113,11 @@ bool validate_selection(int selection){
 
 //function to switch from player one to two and vice versa
 void switch_turns(){
-	turn = (turn == 'X') ? 'O' : 'X';
+	turn = (turn == 1) ? 2 : 1;
 	run();
 }
 
-void check_status(vector<char> board){
+void check_status(vector<int> board){
 	int gameStatus = checkGame(board);
 	//before we switch turns, we check if the user won or not
 	if(gameStatus == 0){
@@ -120,11 +136,11 @@ void check_status(vector<char> board){
 	}
 }
 
-vector<int> getAllPossibleMoves(vector<char> board){
+vector<int> getAllPossibleMoves(vector<int> board){
 	vector<int> spaces;
 	for (int i = 0; i < 9; ++i)
 	{
-		if (board[i] == 'E')
+		if (board[i] == '0')
 		{
 			//this is the chosen one
 			spaces.push_back(i);
@@ -136,7 +152,7 @@ vector<int> getAllPossibleMoves(vector<char> board){
 //we use this function to check the game status, is it won, or draw
 //int unfinished = 0, won = 1, draw = 2;
 
-int checkGame(vector<char> board){
+int checkGame(vector<int> board){
 	if(check_winner(board)){
 		return 1;
 	}
@@ -148,7 +164,7 @@ int checkGame(vector<char> board){
 	return 0;
 }
 
-int getScore(vector<char> board, char turn){
+int getScore(vector<int> board, char turn){
 	int bestScore = 0,
 		iterations = 0,
 		MAXWIN = 100,
@@ -164,7 +180,7 @@ int getScore(vector<char> board, char turn){
 	for(std::vector<int>::size_type i = 0; i != moves.size(); i++) 
 	{
 		//okay so for this we clone the board, add our move
-		vector<char> newBoard(board);
+		vector<int> newBoard(board);
 		//then we add a move 
 		newBoard[moves[i]] = turn;
 
@@ -174,7 +190,7 @@ int getScore(vector<char> board, char turn){
 			//if the AI wins : calculate the score, if it is better, save it as best score
 			//if the opponent wins : we calculate the lose score, compare it if it is better, then save it..
 			int score;
-			if (turn == 'O')
+			if (turn == 2)
 			{
 				//its me mittens!
 				score =  MAXWIN + penalty*iterations;
@@ -191,8 +207,8 @@ int getScore(vector<char> board, char turn){
 			//the game is unfinished
 			++iterations;
 			//now we create a new board, and get its best score..
-			vector<char> clonedBoard(newBoard);
-			char newTurn = (turn == 'X') ? 'O' : 'X';
+			vector<int> clonedBoard(newBoard);
+			char newTurn = (turn == 1) ? 2 : 1;
 			int score = getScore(clonedBoard,newTurn);
 
 			bestScore = (bestScore < score) ? score : bestScore;
@@ -201,12 +217,12 @@ int getScore(vector<char> board, char turn){
 	}
 	return bestScore;
 }
-bool opponentMove(vector<char> board){
+bool opponentMove(vector<int> board){
 	bool win = false;
 	vector<int> opponentMoves = getAllPossibleMoves(board);
 	for(std::vector<int>::size_type i = 0; i != opponentMoves.size(); i++) {
-		vector<char> newBoard(originalBoard);
-		newBoard[opponentMoves[i]] = 'X';
+		vector<int> newBoard(originalBoard);
+		newBoard[opponentMoves[i]] = 1;
 		if (checkGame(newBoard) == 1)
 		{
 			win = true;
@@ -239,8 +255,8 @@ int nextMove(){
 		/* code */
 	}
 	for(std::vector<int>::size_type i = 0; i != size; i++) {
-	    vector<char> newBoard(originalBoard);
-		newBoard[moves[i]] = 'O';
+	    vector<int> newBoard(originalBoard);
+		newBoard[moves[i]] = 2;
 		//now we check whether the move wins us or not
 		int priority = checkGame(newBoard);
 		if (priority > bestPriority && priority != 0)
@@ -265,7 +281,7 @@ void AI(){
 	int next = nextMove();
 	//now we use it on screen
 	if(validate_selection(next)){
-		originalBoard[next] = 'O';
+		originalBoard[next] = 2;
 		check_status(originalBoard);
 	}
 	else{
@@ -288,9 +304,9 @@ void player(){
 
 //function to show the board
 void run(){
-	ShowBoard();
+	DrawBoard();
 	//Artificial Inteligence :)
-	if(opponent == 2 && turn == 'O'){
+	if(opponent == 2 && turn == 2){
 		AI();
 	}
 	else{
@@ -301,7 +317,7 @@ void run(){
 
 int main(){
 	//we first populate the board with dummy strings
-	char dummy[9] = {'E','E','E','E','E','E','E','E','E'};
+	char dummy[9] = {'0','0','0','0','0','0','0','0','0'};
 
 	for(int index=0;index<9; ++index)
 	{
