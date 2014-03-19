@@ -12,11 +12,11 @@
 using namespace std;
 
 //This is our board, 0 => empty, 1 => X, 2 => O
-vector<char> board;
+vector<char> originalBoard;
 //the game is running or not ? 1 yes , 0 no
 int status = 0;
 //turns 1 = player1, 2 = player2 OR CPU
-int turn = 1;
+char turn = 'X';
 //to define the character we put in the column
 char block;
 //the user input
@@ -27,11 +27,9 @@ int opponent;
 int checkGame(vector<char> board);
 void run();
 //show the board
-void show_board() {
-    cout << "+++++++++++++++++++++++++++++" << endl;
+void ShowBoard() {
     for(int i=0; i<7; i+=3) {
-        cout << "+++++ "<< board[i] <<" ++++ "<< board[i+1] << " +++++ " << board[i+2] <<" ++++++" << endl;
-        cout << "+++++++++++++++++++++++++++++" << endl;
+        cout <<  originalBoard[i] <<" | "<< originalBoard[i+1] << "| " << originalBoard[i+2]  << endl;
     }
 }
 
@@ -89,7 +87,7 @@ bool validate_selection(int selection){
 	{
 		return false;
 	}
-	if(board[selection] == 'X' || board[selection] == 'O'){
+	if(originalBoard[selection] == 'X' || originalBoard[selection] == 'O'){
 		return false;
 	}
 	else {
@@ -99,12 +97,7 @@ bool validate_selection(int selection){
 
 //function to switch from player one to two and vice versa
 void switch_turns(){
-	if(turn == 1){
-		turn = 2;
-	}
-	else{
-		turn = 1;
-	}
+	turn = (turn == 'X') ? 'O' : 'X';
 	run();
 }
 
@@ -117,13 +110,11 @@ void check_status(vector<char> board){
 	}
 	//what if the game is a Draw ?
 	else if(gameStatus == 2){
-		show_board();
 		show_draw();
 		status = 0;
 	}
 	else if(gameStatus == 1){
 		//winnnnnn
-		show_board();
 		show_winner();
 		status = 0;
 	}
@@ -176,6 +167,7 @@ int getScore(vector<char> board, char turn){
 		vector<char> newBoard(board);
 		//then we add a move 
 		newBoard[moves[i]] = turn;
+
 		//now we check if the game is won or a draw
 		if (checkGame(newBoard) == 1){
 			//this move, wins the game, but who won?
@@ -188,11 +180,10 @@ int getScore(vector<char> board, char turn){
 				score =  MAXWIN + penalty*iterations;
 			}else{
 				//its the human being...
-				score = -MAXWIN - penalty*iterations;
+				score = -MAXWIN + penalty*iterations;
 				
 			}
 			bestScore = (bestScore < score) ? score : bestScore;
-
 		}else if (checkGame(newBoard) == 2){
 			//its a draw, we see if the bestScore is a losing score, we rather draw than lose..
 			bestScore = (bestScore < 0) ? 0 : bestScore;
@@ -203,49 +194,79 @@ int getScore(vector<char> board, char turn){
 			vector<char> clonedBoard(newBoard);
 			char newTurn = (turn == 'X') ? 'O' : 'X';
 			int score = getScore(clonedBoard,newTurn);
+
 			bestScore = (bestScore < score) ? score : bestScore;
 		}
 
 	}
 	return bestScore;
 }
+bool opponentMove(vector<char> board){
+	bool win = false;
+	vector<int> opponentMoves = getAllPossibleMoves(board);
+	for(std::vector<int>::size_type i = 0; i != opponentMoves.size(); i++) {
+		vector<char> newBoard(originalBoard);
+		newBoard[opponentMoves[i]] = 'X';
+		if (checkGame(newBoard) == 1)
+		{
+			win = true;
+			break;
+		}
+	}
+	return win;
+}
 int nextMove(){
 	//first we see, if the game has just begun
 	//first we generate a list of all possible moves
-	//then we loop over it
-	//then we get the score of each move
-	//and we compare it to the bestScore, if it is better take it and keep it as best move
+	//then we loop over it over each choice, if the game can be lost on the next human move
+	//priority = 0 if draw, 1 if lose, 2 if win;
 	int bestScore = 0,
+		bestPriority,
 		bestMove = 0;
 
-	vector<int> moves = getAllPossibleMoves(board);
+	vector<int> moves = getAllPossibleMoves(originalBoard);
 	int size = moves.size();
+
 	if (size == 8)
 	{
-		int random = rand() % size;
+		int random = rand() % moves[7] + moves[0];
 		return moves[random];
 
 	}
+	//now we see what the opponent would pick..
+	if (opponentMove(originalBoard))
+	{
+		/* code */
+	}
 	for(std::vector<int>::size_type i = 0; i != size; i++) {
-	    vector<char> newBoard(board);
+	    vector<char> newBoard(originalBoard);
 		newBoard[moves[i]] = 'O';
-		int score = getScore(newBoard,'X');
-		if (bestScore < score)
+		//now we check whether the move wins us or not
+		int priority = checkGame(newBoard);
+		if (priority > bestPriority && priority != 0)
 		{
-			bestScore = score;
+			bestPriority = priority;
 			bestMove = moves[i];
+		}
+		else if (priority == 0)
+		{
+			//the game is unfinished, if true it means he can win
+			if (!opponentMove(newBoard) && priority > bestPriority)
+			{
+				bestPriority = priority;
+				bestMove = moves[i];
+			}
 		}
 	}
 	return bestMove;
 }
-
 void AI(){
-	cout << "Calculating..." << endl;
+	//cout << "Calculating..." << endl;
 	int next = nextMove();
 	//now we use it on screen
 	if(validate_selection(next)){
-		board[next] = 'O';
-		check_status(board);
+		originalBoard[next] = 'O';
+		check_status(originalBoard);
 	}
 	else{
 		AI();
@@ -256,8 +277,8 @@ void player(){
 	cout << "Player " << turn << " Please enter a valid number (0-8) :" <<endl;
 	cin >> selection;
 	if(validate_selection(selection)){
-		board[selection] = block;
-		check_status(board);
+		originalBoard[selection] = turn;
+		check_status(originalBoard);
 	}else{
 		//his choice is invalid
 		cout << "invalid move" << endl;
@@ -267,10 +288,9 @@ void player(){
 
 //function to show the board
 void run(){
-	show_board();
-	block = (turn == 1) ? 'X' : 'O';
+	ShowBoard();
 	//Artificial Inteligence :)
-	if(opponent == 2 && turn == 2){
+	if(opponent == 2 && turn == 'O'){
 		AI();
 	}
 	else{
@@ -285,7 +305,7 @@ int main(){
 
 	for(int index=0;index<9; ++index)
 	{
-		board.push_back(dummy[index]);
+		originalBoard.push_back(dummy[index]);
 	}
 
 	if(status == 0){
